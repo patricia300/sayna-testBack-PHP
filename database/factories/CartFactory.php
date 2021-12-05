@@ -14,7 +14,10 @@ class CartFactory extends Factory
     public function definition()
     {
         return [
-            //
+        'cartNumber' => $this->faker->randomDigit(),
+        'month' => $this->faker->month(),
+        'year' => $this->faker->year(),
+        'default' => $this->faker->word,
         ];
     }
 }

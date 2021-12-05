@@ -141,12 +141,6 @@ class AuthController extends Controller
                     'message' => 'Email/password incorrect',
                 ],400);
         }
-        // if (!Hash::check($request->password, $user->password, [])) {
-        //     return response()->json([
-        //         'error' => true,
-        //         'message' => 'Email/password hash',
-        //     ],400);
-        // }
         RateLimiter::clear($this->throttleKey());
         $token = $user->createToken('authToken')->plainTextToken;
 
