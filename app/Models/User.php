@@ -23,13 +23,13 @@ class User extends Authenticatable
         'email',
         'password',
         'date_naissance',
-        'sexe'
+        'sexe',
+        'cart_id'
     ];
 
     protected $attributes = [
         'subscription' => 0,
-        'role' => 'user',
-        'cart_id' => null
+        'role' => 'subscriber',
     ];
 
     /**
@@ -46,6 +46,11 @@ class User extends Authenticatable
     public function cart()
     {
         return $this->hasOne(Cart::class);
+    }
+
+    public function bills()
+    {
+        return $this->hasMany(Bill::class);
     }
 
     /**

@@ -13,11 +13,11 @@ class Cart extends Model
         'cartNumber',
         'month',
         'year',
-        'default'
+        'default',
+        'user_id'
     ];
 
     protected $attributes = [
-        'user_id' => null,
         'cartNumber' => null,
         'month' => null,
         'year' => null,

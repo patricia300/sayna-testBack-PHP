@@ -19,4 +19,9 @@ class Bill extends Model
     protected $attributes = [
         "source" => 'Stripe'
     ];
+
+    public function user()
+    {
+        return $this->belongsTo(User::class);
+    }
 }

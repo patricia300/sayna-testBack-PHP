@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Cart;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Validator;
 
 class CartController extends Controller
@@ -49,33 +50,41 @@ class CartController extends Controller
      */
     public function update(Request $request)
     {
+         $user = Auth::user(); 
 
-        $user = Auth::user() ; 
+        
+        if(!Gate::allows('abonne_access',[$user]))
+        {
+            return response()->json([
+                'error' => true,
+                'message' => 'vos droit d\'accès ne permettent pas d\'accéder à la ressource'
+            ]);
+        }
 
         $credentials = Validator::make($request->all(),[
-            'cartNumber' => 'required|unique:carts,cartNumber',
-            'month' => 'required|string',
-            'year' => 'required',
-            'default' => 'required'
+            'cartNumber' => 'bail|required|string|unique:carts,cartNumber',
+            'month' => 'bail|required|string',
+            'year' => 'bail|required',
+            'default' => 'bail|required|string'
+        ],[
+            'required' => 'Informations bancaire incorrectes',
+            'string' =>  'Une ou plusieurs données sont eronnées',
+            'unique' => 'La carte existe déjà'
         ]);
 
         if($credentials->fails()){
             return response()->json([
                 'error' => true,
-                'message' => 'informations bancaire incorrectes'
-            ]);
+                'message' => $credentials->errors()->first()
+            ],402);
         }
 
-        $cart = new Cart($credentials->validated());
-        $cart->save();
-        $cart->user()->associate($user)->save();
-        $user->cart = $cart->id;
-        $cart->update();
+        $cart = Cart::find($user->cart_id);
+        $cart->update($credentials->validated());
 
         return response()->json([
             'error' => false,
-            'message' => 'Vos données ont été mis à jour',
-            'cart' => $cart
+            'message' => 'Vos données ont été mises à jour',
         ]);
     }
 

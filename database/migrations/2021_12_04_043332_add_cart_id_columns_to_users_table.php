@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Bill;
 use App\Models\Cart;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
@@ -15,7 +16,8 @@ class AddCartIdColumnsToUsersTable extends Migration
     public function up()
     {
         Schema::table('users', function (Blueprint $table) {
-            $table->foreignIdFor(Cart::class,'cart_id')->nullable();
+            $table->foreignIdFor(Cart::class)->nullable()->constrained('carts');
+            $table->foreignIdFor(Bill::class)->nullable()->constrained('bills');
         });
     }
 

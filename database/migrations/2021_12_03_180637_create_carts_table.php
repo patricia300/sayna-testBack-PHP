@@ -21,7 +21,7 @@ class CreateCartsTable extends Migration
             $table->year('year')->nullable();
             $table->string('default')->nullable();
             $table->timestamps();
-            $table->foreignIdFor(User::class,'user_id')->nullable();
+            $table->foreignIdFor(User::class);
         });
     }
 

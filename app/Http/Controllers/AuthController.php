@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Models\Cart;
 use App\Models\User;
 use Exception;
+use Illuminate\Foundation\Auth\User as AuthUser;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Str;
@@ -23,43 +24,80 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
-        // $credentials = Validator::make(
-        //     $request->all(),[
-        //     'firstname' => 'required',
-        //     'lastname' => 'required',
-        //     'email' => ['required','email','unique'],
-        //     'password' => ['required'],
-        //     'date_naissance' => 'required',
-        //     'sexe' => 'required'
-        // ]);
-
         $credentials = Validator::make(
             $request->all(),[
-            'firstname' => 'required',
-            'lastname' => 'required',
-            'email' => ['required','email','unique:users,email'],
-            'password' => ['required','confirmed'],
-            'date_naissance' => 'required',
-            'sexe' => 'required'
+            'firstname' => 'bail|required|string',
+            'lastname' => 'bail|required|string',
+            'email' => 'bail|required|email|unique:users,email',
+            'password' => 'bail|required|string|confirmed',
+            'date_naissance' => 'bail|required|date',
+            'sexe' => 'bail|required|string' ,
+        ],[
+            'required' => 'un ou plusieurs données obligatoire sont manquants',
+            'string' => 'un ou plusieurs données sont eronnés',
+            'unique' => 'Un compte utilisant cette adresse mail est déja enrégistré',
+            'email' => 'Email/password incorrect',
+            'confirmed' => 'Email/password incorrect'
         ]);
         
         if($credentials->fails()){
             return response()->json([
                 'error' => true,
-                'message' => 'un ou plusieurs données obligatoire sont manquants',
-                'email' => $credentials->failed()
+                'message' => $credentials->errors()->first(),
             ]);
         }
-    
-        $user = new User($request->except('password'));
-        $user->password = bcrypt($request->password);
-        $user->save();
 
+        $new_user = $credentials->validated();
+
+        $user = User::create([
+            'firstname' => $new_user['firstname'],
+            'lastname' => $new_user['lastname'],
+            'email' => $new_user['email'],
+            'password' => bcrypt($new_user['password']),
+            'date_naissance' => $new_user['date_naissance'],
+            'sexe' => $new_user['sexe']
+        ]);
+
+      
+        $cart = Cart::create(['user_id' => $user->id]);
+        $user->fill(['cart_id' => $cart->id])->save();
+        
         return response()->json([
             'error' => false,
             'message' => 'L\'utilisateur a été créé avec succès',
             'user' =>  $user
         ]);
+    }
+
+  
+    /**
+     * Remove the specified resource from storage.
+     *
+     * @return \Illuminate\Http\Response
+     */
+    public function destroy(Request $request)
+    {
+        $user = Auth::user();
+        $user_delete = User::where('email',$user->email)->get()->first();
+
+        if(!$user){
+            return response()->json([
+                'error' => true,
+                'message' => 'Votre token n\'est pas correct'
+            ]);
+        }
+
+       if($user_delete)
+        {
+            $request->user()->tokens()->delete();
+            $cart = $user->cart;
+            $cart->delete();
+            $user_delete->delete();
+           return response()->json([
+                'error' => false,
+                'message' => 'Votre compte a été supprimé avec succès',
+            ]);
+        }       
     }
 
     /**
@@ -70,70 +108,54 @@ class AuthController extends Controller
      */
     public function login(Request $request)
     {
-        $this->checkTooManyFailedAttempts();
-       
+        if($this->checkTooManyFailedAttempts()){
+            return response()->json([
+                'error' => true,
+                'message' => 'trop de tentative sur l\'email '.request('email').'  ... veuillez patientez',
+            ],423);
+        }
+
         $credentials = Validator::make(
-            $request->only(['email','password']),[
+        $request->only(['email','password']),[
             'email' => 'required|email',
             'password' => 'required',
+        ],[
+            'required' => 'Email/password manquants',
         ]);
-        
+
         if($credentials->fails()){
             return response()->json([
                 'error' => true,
-                'message' => 'Email/password manquants',
-                'email' => $credentials->failed()
+                'message' => $credentials->errors()->first(),
             ],400);
         }
 
-        $user = User::where('email', $request->email)->first();
-        if(!$user || !Hash::check($request->password, $user->password)){
-            return response()->json([
-                'error' => true,
-                'message' => 'Email/password incorrect',
-            ],400);
+        $credentials = $credentials->validated();
+        $user = User::where('email', $credentials['email'])->first();
+        if (!Auth::attempt($credentials))
+        {
+            RateLimiter::hit($this->throttleKey(),120);
+
+                return response()->json([
+                    'error' => true,
+                    'message' => 'Email/password incorrect',
+                ],400);
         }
-
-        if(Auth::attempt($credentials->validated())){
-           
-            $token = $user->createToken('authToken')->plainTextToken;
-
-            return response()->json([
-                'error' => false,
-                'message' => 'L\'utilisateur a été authentifié avec succès',
-                'user' => $user,
-                'token' => $token
-            ]);
-        }
-
-        RateLimiter::hit($this->throttleKey(), $seconds = 60);
-        return response()->json([
-            'error' => true,
-            'message' => 'trop de tentative sur l\'email '.request('email').'  ... veuillez patientez'
-        ]);
-
-        // if (!Auth::attempt($credentials->validated()))
-        // {
-        //     RateLimiter::hit($this->throttleKey(), $seconds = 20);
-
+        // if (!Hash::check($request->password, $user->password, [])) {
         //     return response()->json([
         //         'error' => true,
-        //         'message' => 'trop de tentative sur l\'email '.request('email').'  ... veuillez patientez'
-        //     ]);
+        //         'message' => 'Email/password hash',
+        //     ],400);
         // }
+        RateLimiter::clear($this->throttleKey());
+        $token = $user->createToken('authToken')->plainTextToken;
 
-    }
-
-  
-    /**
-     * Remove the specified resource from storage.
-     *
-     * @param  int  $id
-     * @return \Illuminate\Http\Response
-     */
-    public function destroy($id)
-    {
-        //
+        return response()->json([
+            'error' => false,
+            'message' => 'L\'utilisateur a été authentifié avec succès',
+            'user' => $user,
+            'token' => $token
+        ]);
     }
 
     /**
@@ -143,25 +165,16 @@ class AuthController extends Controller
      */
     public function throttleKey()
     {
-        return Str::lower(request('email'));
+        return Str::lower(request('email')) . '|' . request()->ip();
     }
 
-     /**
+    /**
      * Ensure the login request is not rate limited.
      *
      * @return void
      */
     public function checkTooManyFailedAttempts()
     {
-        if (!RateLimiter::tooManyAttempts($this->throttleKey(), 2)) {
-            return;
-        }
-
-        RateLimiter::hit($this->throttleKey(), $seconds = 60);
-
-        return response()->json([
-            'error' => true,
-            'message' => 'trop de tentative sur l\'email '.request('email').'  ... veuillez patientez'
-        ]);
+        return RateLimiter::tooManyAttempts($this->throttleKey(),5);    
     }
 }

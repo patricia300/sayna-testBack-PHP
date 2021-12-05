@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use App\Models\Bill;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\Gate;
 
 class BillController extends Controller
 {
@@ -15,11 +17,18 @@ class BillController extends Controller
     public function index()
     {
         
+            $user = Auth::user();
+            if(!Gate::allows('abonne_access',$user))
+            {
+                return response()->json([
+                    'error' => true,
+                    'message' => 'vos droits d\'accès ne permettent pas d\'accéder à la ressource'
+                ]);
+            }
 
-            $bills = Bill::all();
             return response()->json([
                 'error' => false,
-                'bill' => $bills
+                'bill' => $user->bills
             ]);
 
         // } catch (\Throwable $th) {

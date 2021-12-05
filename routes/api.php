@@ -29,12 +29,10 @@ Route::group(['middleware' => ['auth:sanctum']],function () {
     //simple user
     Route::delete('/user',[AuthController::class,'destroy']);
 
-    // droit d'accès admnistrateur
-    Route::put('/user/cart',[CartController::class,'update']);
-    Route::get('/bills',[BillController::class,'index']);
-
-    //droit d'acces au abonné
+    //subcribe access
     Route::get('/songs',[SongController::class,'index']);
     Route::get('/songs/{id}',[SongController::class,'show']);
+    Route::put('/user/cart',[CartController::class,'update']);
+    Route::get('/bills',[BillController::class,'index']);
     
 });
