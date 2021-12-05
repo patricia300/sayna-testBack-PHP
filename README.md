@@ -5,7 +5,7 @@ Descrption
 APi with register and login ....update Bank Card ...song list for subscriber user ....see bill for subscriber user
 
 Register a user
-route : /api/register
+route : /api/register METHOD:POST
 required data :
 
 {
@@ -20,15 +20,19 @@ required data :
 }
 
 Login User
-route : /api/login
+route : /api/login METHOD:POST
 Required data :
 {
   "email":"test@gmail.com"
   "password":"test123456"
 }
 
+Delete User 
+Required token to delete your own user account
+route : api/user  METHOD:DELETE
+
 Update Card Information 
-route : /api/user/cart  Required token to authorize
+route : /api/user/cart METHOD:PUT  Required token to authorize
 Required data : in postman..you need to use the x-www-form-urlencoded to function
  {
     "cartNumber": "456789-556812-5654584",
@@ -36,6 +40,14 @@ Required data : in postman..you need to use the x-www-form-urlencoded to functio
     "year": 2021,
     "default": "dont"
 }
+
+Getting song required token to get songs
+route : api/songs or one song api/songs/1  METHOD:GET
+
+Getting bill for user subscriber 
+route : api/bills
+
+
 
 
 
